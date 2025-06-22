@@ -3,46 +3,78 @@
 
 <head>
   <meta charset="UTF-8" />
-  <title>Excel Keyword Filter with Export</title>
+  <title>Excel Keyword Filter with Export - Raj Queen Restaurant</title>
 
-  <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- XLSX library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-  <!-- Currency.js -->
   <script src="https://cdn.jsdelivr.net/npm/currency.js@2.0.4/dist/currency.min.js"></script>
+
+  <style>
+    /* Full screen canvas behind everything */
+    #bgCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+      background: #b9d6c5; /* deep blue background */
+    }
+
+    /* Container style */
+    .container {
+      max-width: 64rem; /* max-w-4xl = 64rem = 1024px */
+      width: 90vw;
+      background: rgba(232, 243, 229, 0.95);
+      border-radius: 1rem;
+      padding: 1.5rem 2rem;
+      box-shadow: 0 8px 20px rgb(0 0 0 / 0.2);
+      overflow-y: auto;
+      max-height: 90vh;
+    }
+
+        /* Container style */
+    .inputF {
+      background: rgba(246, 253, 245, 0.95);
+    }
+
+    /* Buttons user-select */
+    button {
+      user-select: auto;
+    }
+  </style>
 </head>
 
-<body class="bg-gray-50 min-h-screen p-8 font-sans">
+<body class="flex items-center justify-center min-h-screen p-4">
 
-  <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-8">
-    <h1 class="text-3xl font-semibold mb-6 text-center"> ☕ Raj Queen Restaurant Financial Records detailed 2025  ☕</h1>
-    <p class="text-xl font-semibold mb-8 text-center">Last Updated: 06/05/2025</p>
+  <canvas id="bgCanvas"></canvas>
 
-    <div class="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
-      <input type="file" value="data/dataByMuhidur.xlsx"  id="excelFile" accept=".xlsx,.xls,.csv" class="border border-gray-300 rounded-md p-2 flex-1" />
+  <div class="container flex flex-col gap-6">
+
+    <h1 class="text-3xl font-bold text-center text-gary-900">☕ Raj Queen Restaurant Financial Records 2025 ☕</h1>
+    <p class="text-center text-lg font-semibold text-blue-700">Last Updated: 06/05/2025</p>
+
+    <div class="flex flex-col sm:flex-row sm:items-center gap-3">
       <input type="text" id="keyword" placeholder="Enter keyword (e.g. Travel Charge)"
-        class="border border-gray-300 rounded-md p-2 flex-1" />
-      <button onclick="handleExcel()"
-        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-md transition">
+        class="flex-1 border border-gray-300 rounded-md p-2 text-gray-800 focus:outline-blue-600 inputF" />
+      <button onclick="filterData()"
+        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-md transition w-full sm:w-auto">
         Search
       </button>
       <button onclick="exportToExcel()"
-        class="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-md transition">
+        class="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-md transition w-full sm:w-auto">
         Export
       </button>
     </div>
 
-    <label class="inline-flex items-center gap-2 mb-6">
+    <label class="inline-flex items-center gap-2 select-none text-blue-900 text-sm sm:text-base">
       <input type="checkbox" id="priorityFilter" class="form-checkbox h-5 w-5 text-blue-600" />
-      <span class="text-gray-700 select-none">Priority: Exact match only</span>
+      Priority: Exact match only
     </label>
 
-    <div class="overflow-x-auto">
-      <table class="min-w-full border border-gray-300 rounded-md shadow-sm overflow-hidden">
-        <thead class="bg-blue-100 text-blue-900 font-semibold text-left">
+    <div class="overflow-x-auto rounded-md border border-gray-300 shadow-sm inputF">
+      <table class="min-w-full text-gray-900">
+        <thead class="bg-blue-100 font-semibold text-left text-blue-900">
           <tr>
             <th class="py-3 px-4 border-b border-gray-300">No.</th>
             <th class="py-3 px-4 border-b border-gray-300">Date</th>
@@ -50,139 +82,224 @@
             <th class="py-3 px-4 border-b border-gray-300 text-right">Cost</th>
           </tr>
         </thead>
-        <tbody id="results" class="bg-white text-gray-800"></tbody>
+        <tbody id="results" class="bg-white"></tbody>
       </table>
     </div>
   </div>
 
   <script>
-    let lastFilteredRows = [];
+    // Canvas particle animation background
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
+    let particlesArray = [];
+    const particleCount = 80;
 
-    function formatExcelDate(value) {
-      if (!value) return '';
+    // Resize canvas
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // Particle class
+    class Particle {
+      constructor() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.size = Math.random() * 3 + 1;
+        this.speedX = (Math.random() - 0.5) * 1.5;
+        this.speedY = (Math.random() - 0.5) * 1.5;
+        this.color = `rgba(255, 255, 255, ${Math.random() * 0.7 + 0.3})`;
+      }
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+
+        // Bounce off edges
+        if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
+        if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
+      }
+      draw() {
+        ctx.beginPath();
+        ctx.fillStyle = this.color;
+        ctx.shadowColor = 'white';
+        ctx.shadowBlur = 4;
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Init particles
+    function initParticles() {
+      particlesArray = [];
+      for (let i = 0; i < particleCount; i++) {
+        particlesArray.push(new Particle());
+      }
+    }
+
+    // Connect particles with lines if close
+    function connectParticles() {
+      let maxDistance = 120;
+      for (let a = 0; a < particlesArray.length; a++) {
+        for (let b = a + 1; b < particlesArray.length; b++) {
+          let dx = particlesArray[a].x - particlesArray[b].x;
+          let dy = particlesArray[a].y - particlesArray[b].y;
+          let distance = Math.sqrt(dx * dx + dy * dy);
+          if (distance < maxDistance) {
+            ctx.strokeStyle = `rgba(255, 255, 255, ${1 - distance / maxDistance})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
+            ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    // Animate loop
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particlesArray.forEach(p => {
+        p.update();
+        p.draw();
+      });
+      connectParticles();
+      requestAnimationFrame(animate);
+    }
+
+    initParticles();
+    animate();
+
+    // Excel & UI Logic (same as before)
+    const EXCEL_URL = "https://raw.githubusercontent.com/MuhidurRahman/RajQueenRestaurant/main/data/dataByMuhidur.xlsx";
+
+    let allRows = [];
+    let filteredRows = [];
+
+    function parseExcelDate(value) {
+      if (!value) return null;
 
       if (typeof value === 'number') {
         const utc_days = value - 25569;
         const utc_value = utc_days * 86400 * 1000;
         const date = new Date(utc_value);
-        return isNaN(date) ? '' : date.toLocaleDateString('en-US', {
-          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-        });
+        return isNaN(date) ? null : date;
       }
 
       if (typeof value === 'string') {
+        const isoDate = new Date(value);
+        if (!isNaN(isoDate)) return isoDate;
+
         const parts = value.split('/');
         if (parts.length === 3) {
           const [day, month, year] = parts.map(Number);
           const date = new Date(year, month - 1, day);
-          return isNaN(date) ? value : date.toLocaleDateString('en-US', {
-            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-          });
+          return isNaN(date) ? null : date;
         }
       }
-
-      return value;
+      return null;
     }
 
+    function formatDate(date) {
+      if (!date) return '';
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      });
+    }
 
-    function formatRawDate(value) {
-      if (!value) return '';
+    function formatDateShort(date) {
+      if (!date) return '';
+      return date.toLocaleDateString('en-US');
+    }
 
-      if (typeof value === 'number') {
-        const utc_days = value - 25569;
-        const utc_value = utc_days * 86400 * 1000;
-        const date = new Date(utc_value);
-        return isNaN(date) ? '' : date.toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit'
+    async function fetchExcel() {
+      try {
+        const res = await fetch(EXCEL_URL);
+        if (!res.ok) throw new Error('Failed to fetch Excel file');
+        const arrayBuffer = await res.arrayBuffer();
+        const data = new Uint8Array(arrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        let json = XLSX.utils.sheet_to_json(sheet);
+
+        let lastDate = null;
+        json = json.map(row => {
+          if (row["Date"]) lastDate = row["Date"];
+          return {
+            ...row,
+            _effectiveDateRaw: lastDate,
+            _effectiveDate: parseExcelDate(lastDate)
+          };
         });
-      }
 
-      if (typeof value === 'string') {
-        const parts = value.split('/');
-        if (parts.length === 3) {
-          const [day, month, year] = parts.map(Number);
-          const date = new Date(year, month - 1, day);
-          return isNaN(date) ? value : date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-          });
-        }
+        allRows = json;
+        filteredRows = [];
+        displayResults([]);
+      } catch (err) {
+        alert('Error loading Excel file: ' + err.message);
       }
-
-      return value;
     }
 
+    function filterData() {
+      const keyword = document.getElementById('keyword').value.trim().toLowerCase();
+      const priority = document.getElementById('priorityFilter').checked;
 
-    function handleExcel() {
-      const file = document.getElementById('excelFile').files[0];
-      const keywordInput = document.getElementById('keyword').value.trim().toLowerCase();
-      const priorityFilter = document.getElementById('priorityFilter').checked;
+      filteredRows = allRows.filter(row => {
+        const item = (row["Spending Details"] || '').toLowerCase();
+
+        if (keyword) {
+          if (priority) {
+            if (item !== keyword) return false;
+          } else {
+            if (!item.includes(keyword)) return false;
+          }
+        }
+
+        return true;
+      });
+
+      displayResults(filteredRows);
+    }
+
+    function displayResults(rows) {
       const results = document.getElementById('results');
       results.innerHTML = '';
-      lastFilteredRows = [];
 
-      if (!file || !keywordInput) {
-        alert('Please upload a file and enter a keyword.');
+      if (rows.length === 0) {
+        results.innerHTML = `
+          <tr>
+            <td colspan="4" class="text-center py-4 text-red-600 font-semibold">❌ No matching items found.</td>
+          </tr>
+        `;
         return;
       }
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(sheet);
-
-        let lastKnownDate = '';
-        const enriched = json.map(row => {
-          if (row["Date"]) lastKnownDate = row["Date"];
-          return { ...row, _effectiveDate: lastKnownDate };
-        });
-
-        const filtered = enriched.filter(row => {
-          let item = (row["Spending Details"] || '').toLowerCase();
-          return priorityFilter ? item === keywordInput : item.includes(keywordInput);
-        });
-
-        if (filtered.length === 0) {
-          results.innerHTML = `
-          <tr>
-            <td colspan="4" class="text-center py-4 text-red-600 font-semibold">❌ No matching items found.</td>
-          </tr>`;
-          return;
-        }
-
-        lastFilteredRows = filtered;
-
-        let total = 0;
-        filtered.forEach((row, index) => {
-          let cost = currency(row["Spending Cost"], { symbol: "৳", separator: ",", decimal: "." }).value || 0;
-          total += cost;
-
-          let dateFormatted = formatExcelDate(row._effectiveDate);
-          const dateFormatted2 = formatRawDate(row._effectiveDate);
-
-
-          results.innerHTML += `
-          <tr class="${index % 2 === 0 ? 'bg-gray-50' : ''}">
-            <td class="py-2 px-4 border-b border-gray-200">${index + 1}</td>
-            <td class="py-2 px-4 border-b border-gray-200"> ${dateFormatted} <span id="date-${index}" class="select-text">${dateFormatted2}</span> <button onclick="copyDate(${index})" class="ml-2 text-xs text-blue-600 underline hover:text-blue-800">
-    Copy
-  </button></td>
+      let total = 0;
+      rows.forEach((row, i) => {
+        const cost = currency(row["Spending Cost"], { symbol: "৳", separator: ",", decimal: "." }).value || 0;
+        total += cost;
+        const dateStr = formatDate(row._effectiveDate);
+        const dateShort = formatDateShort(row._effectiveDate);
+        results.innerHTML += `
+          <tr class="${i % 2 === 0 ? 'bg-gray-50' : ''}">
+            <td class="py-2 px-4 border-b border-gray-200">${i + 1}</td>
             <td class="py-2 px-4 border-b border-gray-200">
-              <span id="item-${index}" class="select-text">${row["Spending Details"] || ''}</span> <button onclick="copyItem(${index})" class="ml-2 text-xs text-blue-600 underline hover:text-blue-800">
-    Copy
-  </button>
-              </td>
+              ${dateStr} 
+              <span id="date-${i}" class="select-text">${dateShort}</span> 
+              <button onclick="copyDate(${i})" class="ml-2 text-xs text-blue-600 underline hover:text-blue-800">Copy</button>
+            </td>
+            <td class="py-2 px-4 border-b border-gray-200">
+              <span id="item-${i}" class="select-text">${row["Spending Details"] || ''}</span>
+              <button onclick="copyItem(${i})" class="ml-2 text-xs text-blue-600 underline hover:text-blue-800">Copy</button>
+            </td>
             <td class="py-2 px-4 border-b border-gray-200 text-right">${currency(cost, { symbol: "৳", separator: ",", decimal: "." }).format()}</td>
           </tr>
         `;
-        });
+      });
 
-        results.innerHTML += `
+      results.innerHTML += `
         <tr class="bg-blue-100 font-semibold text-blue-900">
           <td class="py-3 px-4 border-t border-gray-300">Total</td>
           <td class="py-3 px-4 border-t border-gray-300 text-center">-</td>
@@ -190,39 +307,34 @@
           <td class="py-3 px-4 border-t border-gray-300 text-right">${currency(total, { symbol: "৳", separator: ",", decimal: "." }).format()}</td>
         </tr>
       `;
-      };
-
-      reader.readAsArrayBuffer(file);
     }
+
     function exportToExcel() {
-      if (!lastFilteredRows.length) {
+      if (filteredRows.length === 0) {
         alert('No filtered results to export.');
         return;
       }
 
       const data = [["No.", "Date", "Spending Details", "Cost"]];
-
       let total = 0;
-      lastFilteredRows.forEach((row, index) => {
+
+      filteredRows.forEach((row, i) => {
         const cost = currency(row["Spending Cost"], { symbol: "৳", separator: ",", decimal: "." }).value || 0;
         total += cost;
-        const dateFormatted = formatExcelDate(row._effectiveDate);
         data.push([
-          index + 1,
-          dateFormatted,
+          i + 1,
+          formatDate(row._effectiveDate),
           row["Spending Details"] || '',
           currency(cost, { symbol: "৳", separator: ",", decimal: "." }).format()
         ]);
       });
 
-      // Add Total row
       data.push(["Total", "-", "-", currency(total, { symbol: "৳", separator: ",", decimal: "." }).format()]);
 
       const worksheet = XLSX.utils.aoa_to_sheet(data);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered Results");
 
-      // Format as Excel Table
       worksheet['!ref'] = XLSX.utils.encode_range({
         s: { c: 0, r: 0 },
         e: { c: 3, r: data.length - 1 }
@@ -230,29 +342,24 @@
 
       worksheet['!autofilter'] = { ref: "A1:D1" };
 
-      // Optional: Apply Excel table styles (via SheetJS Pro only)
-      // But this version still adds Excel filters and range highlighting.
-
       const keyword = document.getElementById("keyword").value.trim() || "Filtered";
       const safeKeyword = keyword.replace(/[<>:"\/\\|?*]+/g, '_');
       XLSX.writeFile(workbook, `${safeKeyword}_Results.xlsx`);
     }
-    function copyDate(index) {
-      const dateText = document.getElementById(`date-${index}`).innerText;
-      navigator.clipboard.writeText(dateText).catch(err => {
-        console.error("Failed to copy:", err);
-        alert("❌ Copy failed");
-      });
-    }
-    function copyItem(index) {
-      const dateText = document.getElementById(`item-${index}`).innerText;
-      navigator.clipboard.writeText(dateText).catch(err => {
-        console.error("Failed to copy:", err);
-        alert("❌ Copy failed");
-      });
+
+    function copyDate(i) {
+      const text = document.getElementById(`date-${i}`).innerText;
+      navigator.clipboard.writeText(text).catch(() => alert("❌ Copy failed"));
     }
 
+    function copyItem(i) {
+      const text = document.getElementById(`item-${i}`).innerText;
+      navigator.clipboard.writeText(text).catch(() => alert("❌ Copy failed"));
+    }
 
+    window.onload = () => {
+      fetchExcel();
+    };
   </script>
 
 </body>
