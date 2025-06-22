@@ -13,7 +13,7 @@ It allows internal team members to:
 
 > 🌐 **Hosted on GitHub Pages**
 
- (Access the tool here) [https://muhidurrahman.github.io/RajQueenRestaurant/]
+**[Access the tool here](https://muhidurrahman.github.io/RajQueenRestaurant/)**
 
 ---
 
