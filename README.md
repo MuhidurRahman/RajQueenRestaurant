@@ -13,14 +13,14 @@ It allows internal team members to:
 
 ## 📁 File Structure
 
-├── index.html # Main web interface
-├── assets/
-│ └── data.xlsx # Financial data (preloaded)
-└── README.md # Project documentation
+├── index.html # Main web interface\n
+├── assets\n
+│ └── data.xlsx # Financial data (preloaded)\n
+└── README.md # Project documentation\n
 
 
 > 🌐 **Hosted on GitHub Pages**  
-> Access the tool here: `https://muhidurrahman.github.io/RajQueenRestaurant/`
+> [Access the tool here] (https://muhidurrahman.github.io/RajQueenRestaurant/)
 
 ---
 
