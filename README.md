@@ -38,6 +38,6 @@ It was built by **Md. Muhidur Rahman (Muhid)** **only for Raj Queen Restaurant**
 
 ## 👨‍💻 Author
 
-**Md. Muhidur Rahman** (Muhid)  
-Backend Developer & Discord Bot Creator  
+**Md. Muhidur Rahman** (Muhid) 
+Backend Developer
 📍 Rajbari, Dhaka, Bangladesh  
